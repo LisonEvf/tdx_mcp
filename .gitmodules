@@ -1,0 +1,3 @@
+[submodule "opentdx"]
+	path = opentdx
+	url = https://github.com/LisonEvf/opentdx.git

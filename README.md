@@ -1,0 +1,137 @@
+# Pytdx2 - Python TDX量化数据接口
+
+项目创意来自[`pytdx`](https://github.com/rainx/pytdx)
+
+感谢[@rainx](https://github.com/rainx)迈出的第一步
+
+### ✨ 声明
+
+> 本项目为个人**学习项目，并非已完成的开箱即用的产品**，仅用于学习交流
+>
+> 对于数据有迫切需求的朋友，通达信新推出了[官方量化平台](https://help.tdx.com.cn/quant/)，建议食用。
+
+> 由于项目连接的是通达信客户端明文公开的服务器，是财富趋势科技公司既有的行情软件兼容行情服务器，只是简单整理便于大家学习，**严禁**用于任何**商业用途**，更**严禁滥用接口**，对此造成的任何问题本人概不负责。
+
+又因本项目在持续推进中，接口**难免会有大幅改动，带来的不便请予宽宥**。
+
+
+## MCP Server 一键配置
+
+支持 Claude、Cursor、OpenClaw 等 AI 助手直接调用股票数据。
+
+### 方式一：uvx（推荐）
+
+```json
+{
+  "mcpServers": {
+    "tdx": {
+      "command": "uvx",
+      "args": ["--from", "tdx-mcp", "mcp-server-tdx"]
+    }
+  }
+}
+```
+
+### 方式二：pip 安装后直接运行
+
+```json
+{
+  "mcpServers": {
+    "tdx": {
+      "command": "mcp-server-tdx"
+    }
+  }
+}
+```
+
+### 方式三：本地开发
+
+```json
+{
+  "mcpServers": {
+    "tdx": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/pytdx2", "mcp-server-tdx"]
+    }
+  }
+}
+```
+
+## 主要功能
+
+| 功能 | 说明 |
+|------|------|
+| 股票行情 | A股、创业板、科创板、北交所 |
+| 扩展行情 | 期货、港股、美股、期权等 |
+| K线数据 | 支持多周期（1分/5分/日线/周线等） |
+| 分时图 | 实时/历史分时数据 |
+| 排行榜 | 涨跌幅、振幅、换手率等 |
+| 异动监控 | 主力监控精灵数据 |
+| F10资料 | 公司基本信息、财报 |
+
+## 安装
+
+```bash
+pip install tdx-mcp
+```
+
+## 快速上手
+
+
+```python
+import pandas as pd
+from tdx_mcp import TdxClient, MARKET, CATEGORY, EX_CATEGORY, PERIOD
+
+if __name__ == "__main__":
+  with TdxClient() as client:
+    # 指数信息
+    print(pd.DataFrame(client.index_info([(MARKET.SH, '999999'), (MARKET.SZ, '399001')])))
+    # 股票列表（带排序过滤）
+    print(pd.DataFrame(client.stock_quotes_list(CATEGORY.A, sortType=SORT_TYPE.TOTAL_AMOUNT)))
+    # 股票报价
+    print(pd.DataFrame(client.stock_quotes(MARKET.SZ, '000001')))
+    # 获取行情全景
+    for name, board in client.stock_top_board().items():
+        log.info("榜单：%s", name)
+        print(pd.DataFrame(board))
+    # 获取k线
+    print(pd.DataFrame(client.stock_kline(MARKET.SZ, '000001', PERIOD.DAY)))
+    # 获取指数k线
+    print(pd.DataFrame(client.stock_kline(MARKET.SH, '999999', PERIOD.MINS, times=10)))
+    # 获取历史分时
+    print(pd.DataFrame(client.stock_tick_chart(MARKET.SZ, '000001', date(2026, 3, 16))))
+    # 获取个股F10
+    print(pd.DataFrame(client.stock_f10(MARKET.SZ, '000001')))
+    # 历史成交
+    print(pd.DataFrame(client.stock_transaction(MARKET.SZ, '000001', date(2024, 1, 15))))
+    
+    # 期货K线
+    print(pd.DataFrame(client.goods_kline(EX_CATEGORY.SH_FUTURES, 'AUL8', PERIOD.DAILY)))
+    # 获取期货行情
+    print(pd.DataFrame(client.goods_quotes_list([(EX_CATEGORY.SH_FUTURES, 'AUL8'), (EX_CATEGORY.SH_FUTURES, 'AGL8')])))
+    # 获取美股K线
+    print(pd.DataFrame(client.goods_kline(EX_CATEGORY.US_STOCK, 'TSLA', PERIOD.DAILY)))
+    # 美股行情
+    print(pd.DataFrame(client.goods_quotes(EX_CATEGORY.US_STOCK, 'TSLA')))
+```
+
+### 🌟 本项目亮点
+
+- ✅ **整体重构**：更加简洁易读
+- ✅ **协议简化**：明确了一些协议的细节，更加清晰易懂
+- ✅ **自动选服**：自动检查服务器连接速度，并选择最快的服务器
+- ✅ **主力监控**：新增异动消息的获取
+- ✅ **板块列表**：像 `通达信`一样根据板块获取股票列表，支持 `深市`、`沪市`、`创业板`、`科创板`、`北交所`
+- ✅ **扩展行情**：支持 `期货`、`期权`、`债券`、`基金`、`港股`、`美股`等行情的获取
+- ✅ **AI适配**：MCP模块也算是能跑了，agent还算不上，将会持续优化的
+
+### 📋 TODO List
+
+- [X] backtest模块
+- [X] 基于量价交易的LargeTradeModel
+
+#量化交易 #TDX接口 #Python金融 #MCP
+
+---
+
+[![Star History Chart](https://api.star-history.com/svg?repos=LisonEvf/pytdx2&type=Date)](https://star-history.com/#LisonEvf/pytdx2&Date)
