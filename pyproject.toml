@@ -1,10 +1,10 @@
 [project]
 name = "tdx-mcp"
-version = "0.1.5"
+version = "0.1.6"
 description = "TDX stock data client with MCP server for AI assistants (Claude, Cursor, OpenClaw)"
 authors = [{ name = "LisonEvf", email = "lisonevf@gmail.com" }]
 readme = "README.md"
-license = "MIT"
+license = {text = "MIT"}
 requires-python = ">=3.12"
 keywords = ["stock", "tdx", "mcp", "quant", "finance", "claude", "trading"]
 classifiers = [
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-tdx-mcp = "tdx_mcp.mcpServer:main"
+tdx-mcp = "mcpServer:main"
 
 [project.urls]
 Homepage = "https://github.com/LisonEvf/tdx_mcp"
@@ -32,6 +32,6 @@ Issues = "https://github.com/LisonEvf/tdx_mcp/issues"
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["tdx_mcp*"]
+[tool.setuptools]
+py-modules = ["mcpServer"]
+license-files = []
