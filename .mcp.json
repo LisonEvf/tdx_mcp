@@ -2,7 +2,7 @@
   "mcpServers": {
     "tdx": {
       "command": "uvx",
-      "args": ["--from", "tdx-mcp", "mcp-server-tdx"]
+      "args": ["--from", "tdx-mcp", "tdx-mcp"]
     }
   }
 }

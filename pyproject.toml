@@ -18,19 +18,15 @@ dependencies = [
     "pandas",
     "numpy",
     "mcp[cli]",
-    "opentdx @ file:///${PROJECT_ROOT}/opentdx",
 ]
 
-[tool.setuptools.package-dir]
-opentdx = "opentdx"
-
 [project.scripts]
-mcp-server-tdx = "tdx_mcp.mcpServer:main"
+tdx-mcp = "tdx_mcp.mcpServer:main"
 
 [project.urls]
-Homepage = "https://github.com/LisonEvf/pytdx2"
-Repository = "https://github.com/LisonEvf/pytdx2.git"
-Issues = "https://github.com/LisonEvf/pytdx2/issues"
+Homepage = "https://github.com/LisonEvf/tdx_mcp"
+Repository = "https://github.com/LisonEvf/tdx_mcp.git"
+Issues = "https://github.com/LisonEvf/tdx_mcp/issues"
 
 [build-system]
 requires = ["setuptools>=61.0"]

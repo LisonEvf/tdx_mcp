@@ -1,19 +1,10 @@
-# Pytdx2 - Python TDX量化数据接口
+# tdx-mcp
 
-项目创意来自[`pytdx`](https://github.com/rainx/pytdx)
+基于通达信行情服务器的 MCP Server，为 Claude、Cursor 等 AI 助手提供实时股票数据接口。
 
-感谢[@rainx](https://github.com/rainx)迈出的第一步
+底层依赖 [opentdx](https://github.com/LisonEvf/opentdx)（子模块）
 
-### ✨ 声明
-
-> 本项目为个人**学习项目，并非已完成的开箱即用的产品**，仅用于学习交流
->
-> 对于数据有迫切需求的朋友，通达信新推出了[官方量化平台](https://help.tdx.com.cn/quant/)，建议食用。
-
-> 由于项目连接的是通达信客户端明文公开的服务器，是财富趋势科技公司既有的行情软件兼容行情服务器，只是简单整理便于大家学习，**严禁**用于任何**商业用途**，更**严禁滥用接口**，对此造成的任何问题本人概不负责。
-
-又因本项目在持续推进中，接口**难免会有大幅改动，带来的不便请予宽宥**。
-
+> **声明**：本项目为个人学习项目，连接通达信公开行情服务器，严禁用于商业用途，严禁滥用接口。
 
 ## MCP Server 一键配置
 
@@ -26,7 +17,7 @@
   "mcpServers": {
     "tdx": {
       "command": "uvx",
-      "args": ["--from", "tdx-mcp", "mcp-server-tdx"]
+      "args": ["--from", "tdx-mcp", "tdx-mcp"]
     }
   }
 }
@@ -38,100 +29,65 @@
 {
   "mcpServers": {
     "tdx": {
-      "command": "mcp-server-tdx"
+      "command": "tdx-mcp"
     }
   }
 }
 ```
 
-### 方式三：本地开发
+## 支持的数据
 
-```json
-{
-  "mcpServers": {
-    "tdx": {
-      "command": "uv",
-      "args": ["run", "--directory", "/path/to/pytdx2", "mcp-server-tdx"]
-    }
-  }
-}
-```
-
-## 主要功能
-
-| 功能 | 说明 |
+| 类别 | 说明 |
 |------|------|
-| 股票行情 | A股、创业板、科创板、北交所 |
-| 扩展行情 | 期货、港股、美股、期权等 |
-| K线数据 | 支持多周期（1分/5分/日线/周线等） |
-| 分时图 | 实时/历史分时数据 |
-| 排行榜 | 涨跌幅、振幅、换手率等 |
-| 异动监控 | 主力监控精灵数据 |
-| F10资料 | 公司基本信息、财报 |
+| A股行情 | 沪深北交所、创业板、科创板 |
+| 扩展行情 | 期货、港股、美股、期权 |
+| K线 | 多周期（1分/5分/日线/周线等），支持前/后复权 |
+| 分时 | 实时/历史分时数据 |
+| 排行榜 | 涨跌幅、振幅、换手率、量比等 |
+| 异动监控 | 主力监控精灵 |
+| F10 | 公司基本信息、财报 |
+| 技术指标 | MA、EMA、MACD、RSI、KDJ、BOLL、ATR |
 
-## 安装
+## MCP Tools 一览
 
-```bash
-pip install tdx-mcp
-```
+### 股票数据
 
-## 快速上手
+| Tool | 说明 |
+|------|------|
+| `get_index_overview` | 指数概况（上证/深证/北证/创业/科创/沪深300） |
+| `stock_kline` | K线数据，支持复权 |
+| `stock_quotes` | 个股/批量报价 |
+| `stock_quotes_list` | 板块行情列表，支持排序过滤 |
+| `stock_tick_chart` | 分时图 |
+| `stock_top_board` | 涨跌/振幅/量比等排行榜 |
+| `stock_transaction` | 历史成交 |
+| `stock_auction` | 竞价数据 |
+| `stock_unusual` | 异动监控 |
+| `stock_f10` | F10 公司信息 |
 
+### 扩展行情
 
-```python
-import pandas as pd
-from tdx_mcp import TdxClient, MARKET, CATEGORY, EX_CATEGORY, PERIOD
+| Tool | 说明 |
+|------|------|
+| `goods_kline` | 期货/港股/美股 K线 |
+| `goods_quotes` | 扩展行情报价 |
+| `goods_quotes_list` | 扩展行情列表 |
+| `goods_tick_chart` | 商品分时图 |
+| `goods_history_transaction` | 商品历史成交 |
 
-if __name__ == "__main__":
-  with TdxClient() as client:
-    # 指数信息
-    print(pd.DataFrame(client.index_info([(MARKET.SH, '999999'), (MARKET.SZ, '399001')])))
-    # 股票列表（带排序过滤）
-    print(pd.DataFrame(client.stock_quotes_list(CATEGORY.A, sortType=SORT_TYPE.TOTAL_AMOUNT)))
-    # 股票报价
-    print(pd.DataFrame(client.stock_quotes(MARKET.SZ, '000001')))
-    # 获取行情全景
-    for name, board in client.stock_top_board().items():
-        log.info("榜单：%s", name)
-        print(pd.DataFrame(board))
-    # 获取k线
-    print(pd.DataFrame(client.stock_kline(MARKET.SZ, '000001', PERIOD.DAY)))
-    # 获取指数k线
-    print(pd.DataFrame(client.stock_kline(MARKET.SH, '999999', PERIOD.MINS, times=10)))
-    # 获取历史分时
-    print(pd.DataFrame(client.stock_tick_chart(MARKET.SZ, '000001', date(2026, 3, 16))))
-    # 获取个股F10
-    print(pd.DataFrame(client.stock_f10(MARKET.SZ, '000001')))
-    # 历史成交
-    print(pd.DataFrame(client.stock_transaction(MARKET.SZ, '000001', date(2024, 1, 15))))
-    
-    # 期货K线
-    print(pd.DataFrame(client.goods_kline(EX_CATEGORY.SH_FUTURES, 'AUL8', PERIOD.DAILY)))
-    # 获取期货行情
-    print(pd.DataFrame(client.goods_quotes_list([(EX_CATEGORY.SH_FUTURES, 'AUL8'), (EX_CATEGORY.SH_FUTURES, 'AGL8')])))
-    # 获取美股K线
-    print(pd.DataFrame(client.goods_kline(EX_CATEGORY.US_STOCK, 'TSLA', PERIOD.DAILY)))
-    # 美股行情
-    print(pd.DataFrame(client.goods_quotes(EX_CATEGORY.US_STOCK, 'TSLA')))
-```
+### 技术指标
 
-### 🌟 本项目亮点
-
-- ✅ **整体重构**：更加简洁易读
-- ✅ **协议简化**：明确了一些协议的细节，更加清晰易懂
-- ✅ **自动选服**：自动检查服务器连接速度，并选择最快的服务器
-- ✅ **主力监控**：新增异动消息的获取
-- ✅ **板块列表**：像 `通达信`一样根据板块获取股票列表，支持 `深市`、`沪市`、`创业板`、`科创板`、`北交所`
-- ✅ **扩展行情**：支持 `期货`、`期权`、`债券`、`基金`、`港股`、`美股`等行情的获取
-- ✅ **AI适配**：MCP模块也算是能跑了，agent还算不上，将会持续优化的
-
-### 📋 TODO List
-
-- [X] backtest模块
-- [X] 基于量价交易的LargeTradeModel
-
-#量化交易 #TDX接口 #Python金融 #MCP
+| Tool | 说明 |
+|------|------|
+| `indicator_ma` | 移动平均线 |
+| `indicator_ema` | 指数移动平均 |
+| `indicator_macd` | MACD |
+| `indicator_rsi` | RSI |
+| `indicator_kdj` | KDJ |
+| `indicator_boll` | 布林带 |
+| `indicator_atr` | 真实波动幅度 |
+| `indicator_vol_ma` | 成交量均线 |
 
 ---
 
-[![Star History Chart](https://api.star-history.com/svg?repos=LisonEvf/pytdx2&type=Date)](https://star-history.com/#LisonEvf/pytdx2&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=LisonEvf/tdx_mcp&type=Date)](https://star-history.com/#LisonEvf/tdx_mcp&Date)
