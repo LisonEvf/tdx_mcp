@@ -6,7 +6,7 @@ from mcp.server.fastmcp import FastMCP
 
 from opentdx.client.exQuotationClient import exQuotationClient
 from opentdx.client.quotationClient import QuotationClient
-from opentdx.const import ADJUST, CATEGORY, EX_CATEGORY, FILTER_TYPE, MARKET, PERIOD, SORT_TYPE
+from opentdx.const import ADJUST, CATEGORY, EX_MARKET, FILTER_TYPE, MARKET, PERIOD, SORT_TYPE
 
 mcp = FastMCP('TDX MCP Server')
 
@@ -38,8 +38,8 @@ _FILTER_DESC = "过滤类型(可组合): 1=次新股(NEW), 2=科创板(KC), 4=ST
 # SORT_TYPE
 _SORT_DESC = """排序类型: 0=代码, 6=现价, 14=涨幅%, 15=振幅%, 34=换手%, 35=量比, 224=涨速%, 22=委比%, 9=总量, 10=总金额"""
 
-# EX_CATEGORY
-_EX_CATEGORY_DESC = """扩展市场类别: 28=郑州商品, 29=大连商品, 30=上海期货, 47=中金所期货, 31=香港主板, 71=港股, 16=纽约COMEX, 17=纽约NYMEX, 18=芝加哥CBOT"""
+# EX_MARKET
+_EX_MARKET_DESC = """扩展市场类别: 28=郑州商品, 29=大连商品, 30=上海期货, 47=中金所期货, 31=香港主板, 71=港股, 16=纽约COMEX, 17=纽约NYMEX, 18=芝加哥CBOT"""
 
 _DATE_DESC = "日期，格式: YYYY-MM-DD（如 2024-01-15）"
 
@@ -362,18 +362,18 @@ def stock_f10(market: int, code: str) -> list[dict]:
     return hq().get_company_info(MARKET(market), code)
 
 @mcp.tool()
-def goods_quotes_list(category: int, start: int = 0, count: int = 100, sortType: int = 0, reverse: bool = False) -> list[dict]:
+def goods_quotes_list(market: int, start: int = 0, count: int = 100, sortType: int = 0, reverse: bool = False) -> list[dict]:
     '''
     获取期货商品行情列表
         Args:
-            category: int  - ''' + _EX_CATEGORY_DESC + '''
+            market: int  - ''' + _EX_MARKET_DESC + '''
             start: int     - 起始位置
             count: int     - 获取数量
             sortType: int  - ''' + _SORT_DESC + '''
             reverse: bool  - 倒序排序
         Return:
             List[Dict]: 商品行情列表，每个元素包含：
-            - category: EX_CATEGORY - 扩展市场类别
+            - market: EX_MARKET - 扩展市场类别
             - code: str             - 股票代码
             - open: float           - 今开
             - high: float           - 最高
@@ -406,19 +406,19 @@ def goods_quotes_list(category: int, start: int = 0, count: int = 100, sortType:
             - raise_speed: float    - 涨速
             - active: int           - 活跃度
     '''
-    return ex_hq().get_quotes_list(EX_CATEGORY(category), start, count, SORT_TYPE(sortType), reverse)
+    return ex_hq().get_quotes_list(EX_MARKET(market), start, count, SORT_TYPE(sortType), reverse)
 
 @mcp.tool()
 def goods_quotes(code_list: int | list[tuple[int, str]], code = None) -> list[dict]:
     '''
     获取多个期货商品行情
-    支持三种形式: goods_quotes(category, code), goods_quotes((category, code)), goods_quotes([(category1, code1), (category2, code2)])
+    支持三种形式: goods_quotes(market, code), goods_quotes((market, code)), goods_quotes([(market1, code1), (market2, code2)])
         Args:
-            code_list: int或元组列表 - ''' + _EX_CATEGORY_DESC + '''
-            code: str               - 商品代码（当code_list为category时使用）
+            code_list: int或元组列表 - ''' + _EX_MARKET_DESC + '''
+            code: str               - 商品代码（当code_list为market时使用）
         Return:
             List[Dict]: 商品报价列表，每个元素包含：
-            - category: EX_CATEGORY - 扩展市场类别
+            - market: EX_MARKET - 扩展市场类别
             - code: str             - 股票代码
             - open: float           - 今开
             - high: float           - 最高
@@ -452,18 +452,18 @@ def goods_quotes(code_list: int | list[tuple[int, str]], code = None) -> list[di
             - active: int           - 活跃度
     '''
     if isinstance(code_list, int):
-        return ex_hq().get_quotes(EX_CATEGORY(code_list), code)
+        return ex_hq().get_quotes(EX_MARKET(code_list), code)
     elif isinstance(code_list, list):
-        converted = [(EX_CATEGORY(c), code_item) for c, code_item in code_list]
+        converted = [(EX_MARKET(c), code_item) for c, code_item in code_list]
         return ex_hq().get_quotes(converted, code)
     return ex_hq().get_quotes(code_list, code)
 
 @mcp.tool()
-def goods_kline(category: int, code: str, period: int, start: int = 0, count: int = 800, times: int = 1) -> list[dict]:
+def goods_kline(market: int, code: str, period: int, start: int = 0, count: int = 800, times: int = 1) -> list[dict]:
     '''
     获取商品K线图
         Args:
-            category: int - ''' + _EX_CATEGORY_DESC + '''
+            market: int - ''' + _EX_MARKET_DESC + '''
             code: str     - 商品代码
             period: int   - ''' + _PERIOD_DESC + '''
             start: int    - 起始位置，默认为0
@@ -479,14 +479,14 @@ def goods_kline(category: int, code: str, period: int, start: int = 0, count: in
             - vol: int              - 成交量
             - amount: float         - 成交额
     '''
-    return ex_hq().get_kline(EX_CATEGORY(category), code, PERIOD(period), start, count, times)
+    return ex_hq().get_kline(EX_MARKET(market), code, PERIOD(period), start, count, times)
 
 @mcp.tool()
-def goods_history_transaction(category: int, code: str, date: str) -> list[dict]:
+def goods_history_transaction(market: int, code: str, date: str) -> list[dict]:
     '''
     获取商品历史成交
         Args:
-            category: int - ''' + _EX_CATEGORY_DESC + '''
+            market: int - ''' + _EX_MARKET_DESC + '''
             code: str     - 商品代码
             date: str     - ''' + _DATE_DESC + '''
         Return:
@@ -496,14 +496,14 @@ def goods_history_transaction(category: int, code: str, date: str) -> list[dict]
             - vol: int          - 成交量
             - action: str       - 成交方向（SELL，BUY，NEUTRAL）
     '''
-    return ex_hq().get_history_transaction(EX_CATEGORY(category), code, parse_date(date))
+    return ex_hq().get_history_transaction(EX_MARKET(market), code, parse_date(date))
 
 @mcp.tool()
-def goods_tick_chart(category: int, code: str, date: str = None) -> list[dict]:
+def goods_tick_chart(market: int, code: str, date: str = None) -> list[dict]:
     '''
     获取商品分时图
         Args:
-            category: int - ''' + _EX_CATEGORY_DESC + '''
+            market: int - ''' + _EX_MARKET_DESC + '''
             code: str     - 商品代码
             date: str     - ''' + _DATE_DESC + '''，默认为None（查询当日）
         Return:
@@ -513,7 +513,7 @@ def goods_tick_chart(category: int, code: str, date: str = None) -> list[dict]:
             - avg: float        - 均价
             - vol: int          - 成交量
     '''
-    return ex_hq().get_tick_chart(EX_CATEGORY(category), code, parse_date(date))
+    return ex_hq().get_tick_chart(EX_MARKET(market), code, parse_date(date))
 
 
 # ============ 指标计算工具 ============
