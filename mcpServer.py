@@ -2,16 +2,18 @@ import json
 from datetime import date as date_type
 from datetime import datetime
 
+import pandas as pd
+
 from mcp.server.fastmcp import FastMCP
 
-from opentdx.client.exQuotationClient import exQuotationClient
-from opentdx.client.quotationClient import QuotationClient
-from opentdx.const import ADJUST, CATEGORY, EX_MARKET, FILTER_TYPE, MARKET, PERIOD, SORT_TYPE
+from opentdx.client import exQuotationClient, macQuotationClient, QuotationClient
+from opentdx.const import ADJUST, CATEGORY, EX_CATEGORY, EX_MARKET, FILTER_TYPE, MARKET, PERIOD, SORT_TYPE, SORT_ORDER
 
 mcp = FastMCP('TDX MCP Server')
 
 quotationClient = QuotationClient(True, True)
 ex_quotation_client = exQuotationClient(True, True)
+mac_quotation_client = macQuotationClient(True, True)
 
 def hq():
     if not quotationClient.connected:
@@ -22,6 +24,11 @@ def ex_hq():
     if not ex_quotation_client.connected:
         ex_quotation_client.connect().login()
     return ex_quotation_client
+
+def mac_hq():
+    if not mac_quotation_client.connected:
+        mac_quotation_client.connect().login()
+    return mac_quotation_client
 
 # MARKET: 0=深圳, 1=上海, 2=北交所
 _MARKET_DESC = "市场代码: 0=深圳(SZ), 1=上海(SH), 2=北交所(BJ)"
@@ -42,6 +49,10 @@ _SORT_DESC = """排序类型: 0=代码, 6=现价, 14=涨幅%, 15=振幅%, 34=换
 _EX_MARKET_DESC = """扩展市场类别: 28=郑州商品, 29=大连商品, 30=上海期货, 47=中金所期货, 31=香港主板, 71=港股, 16=纽约COMEX, 17=纽约NYMEX, 18=芝加哥CBOT"""
 
 _DATE_DESC = "日期，格式: YYYY-MM-DD（如 2024-01-15）"
+
+_BOARD_SYMBOL_DESC = """板块代码: 如 "881001"(行业板块)、"881101"(概念板块)、"881201"(地域板块)，也可用板块分类枚举 CATEGORY/EX_CATEGORY"""
+
+_EX_CATEGORY_DESC = """扩展市场分类: 0x1f=香港主板, 0x30=香港创业板, 0x47=港股通, 0x4a=美股, 0x2ee1=恒指成分股, 0x2ee4=恒生国企, 0x2eec=恒生科技, 0x32c9=美股中概股, 0x32ca=知名美股"""
 
 # ============ Resources ============
 
@@ -94,6 +105,17 @@ def resource_filter_types() -> str:
     """过滤类型配置（可组合使用，如 10=科创板+创业板）"""
     return json.dumps({
         "1": "次新股", "2": "科创板", "4": "ST", "8": "创业板", "16": "北证"
+    }, ensure_ascii=False, indent=2)
+
+@mcp.resource("config://board_types")
+def resource_board_types() -> str:
+    """板块类型配置"""
+    return json.dumps({
+        "881001": "行业板块(通达信一级)",
+        "881101": "概念板块",
+        "881201": "地域板块",
+        "0x1f": "香港主板", "0x30": "香港创业板", "0x47": "港股通",
+        "0x4a": "美股", "0x2eec": "恒生科技",
     }, ensure_ascii=False, indent=2)
 
 # ============ Tools ============
@@ -514,6 +536,156 @@ def goods_tick_chart(market: int, code: str, date: str = None) -> list[dict]:
             - vol: int          - 成交量
     '''
     return ex_hq().get_tick_chart(EX_MARKET(market), code, parse_date(date))
+
+
+# ============ A股高级工具 ============
+
+@mcp.tool()
+def stock_quotes_details(code_list: int | list[tuple[int, str]], code: str = None) -> list[dict]:
+    '''
+    获取详细股票行情（含更多字段）
+    支持三种形式: stock_quotes_details(market, code), stock_quotes_details((market, code)), stock_quotes_details([(market1, code1), (market2, code2)])
+        Args:
+            code_list: int或元组列表 - ''' + _MARKET_DESC + '''
+            code: str               - 股票代码（当code_list为market时使用）
+        Return:
+            List[Dict]: 详细行情列表（比 stock_quotes 字段更完整）
+    '''
+    if isinstance(code_list, int):
+        return hq().get_stock_quotes_details(MARKET(code_list), code)
+    elif isinstance(code_list, list):
+        converted = [(MARKET(m), c) for m, c in code_list]
+        return hq().get_stock_quotes_details(converted, code)
+    return hq().get_stock_quotes_details(code_list, code)
+
+
+@mcp.tool()
+def stock_index_momentum(market: int, code: str) -> list[int]:
+    '''
+    获取指数动量数据
+        Args:
+            market: int - ''' + _MARKET_DESC + '''
+            code: str   - 指数代码
+        Return:
+            List[int]: 动量数据列表
+    '''
+    return hq().get_index_momentum(MARKET(market), code)
+
+
+@mcp.tool()
+def stock_history_orders(market: int, code: str, date: str) -> list[dict]:
+    '''
+    获取历史委托数据（逐笔委托流水）
+        Args:
+            market: int - ''' + _MARKET_DESC + '''
+            code: str   - 股票代码
+            date: str   - ''' + _DATE_DESC + '''
+        Return:
+            List[Dict]: 委托数据列表
+    '''
+    return hq().get_history_orders(MARKET(market), code, parse_date(date))
+
+
+# ============ 板块 / 资金流向 / 主力监控 ============
+
+@mcp.tool()
+def board_members_quotes(board_symbol: str = "881001", count: int = 80,
+                         sort_by: int = 14, reverse: bool = True) -> list[dict]:
+    '''
+    获取板块成分股行情（按涨幅排序）
+        Args:
+            board_symbol: str - ''' + _BOARD_SYMBOL_DESC + '''，默认 "881001"
+            count: int        - 获取数量，默认80
+            sort_by: int     - ''' + _SORT_DESC + '''，默认14(涨幅%)
+            reverse: bool     - 是否倒序，默认True（涨幅从大到小）
+        Return:
+            List[Dict]: 板块成分股行情列表
+    '''
+    sort_order = SORT_ORDER.DESC if reverse else SORT_ORDER.ASC
+    return mac_hq().get_board_members_quotes(
+        board_symbol, count=count,
+        sort_type=SORT_TYPE(sort_by), sort_order=sort_order,
+    )
+
+
+@mcp.tool()
+def symbol_zjlx(market: int, code: str) -> list[dict]:
+    '''
+    获取个股资金流向（当日 / 5日）
+        Args:
+            market: int - ''' + _MARKET_DESC + '''
+            code: str   - 股票代码
+        Return:
+            List[Dict]: 资金流向数据
+    '''
+    df = mac_hq().get_symbol_zjlx(code, MARKET(market))
+    return df.to_dict(orient='records') if isinstance(df, pd.DataFrame) else df
+
+
+@mcp.tool()
+def market_monitor(market: int, start: int = 0, count: int = 10) -> list[dict]:
+    '''
+    获取主力监控数据（v1/v2/v3/v4）
+        Args:
+            market: int - ''' + _MARKET_DESC + '''
+            start: int  - 起始位置，默认0
+            count: int  - 获取数量，默认10
+        Return:
+            List[Dict]: 主力监控列表
+    '''
+    return mac_hq().get_market_monitor(MARKET(market), start, count)
+
+
+@mcp.tool()
+def symbol_info(market: int, code: str) -> dict:
+    '''
+    获取个股简要特征（现价/涨跌/内外盘/换手等）
+        Args:
+            market: int - ''' + _MARKET_DESC + '''
+            code: str   - 股票代码
+        Return:
+            Dict: 个股简要信息
+    '''
+    return mac_hq().get_symbol_info(MARKET(market), code)
+
+
+@mcp.tool()
+def symbol_belong_board(market: int, code: str) -> list[dict]:
+    '''
+    查询个股所属板块
+        Args:
+            market: int - ''' + _MARKET_DESC + '''
+            code: str   - 股票代码
+        Return:
+            List[Dict]: 所属板块列表
+    '''
+    df = mac_hq().get_symbol_belong_board(code, MARKET(market))
+    return df.to_dict(orient='records') if isinstance(df, pd.DataFrame) else df
+
+
+@mcp.tool()
+def multi_tick_charts(market: int, code: str, date: str = None, days: int = 5) -> dict:
+    '''
+    获取多日分时图（一次获取多天分时数据）
+        Args:
+            market: int - ''' + _MARKET_DESC + '''
+            code: str   - 股票代码
+            date: str   - ''' + _DATE_DESC + '''，默认为None（查询最新）
+            days: int   - 获取天数，默认5
+        Return:
+            Dict: 多日分时数据
+    '''
+    return mac_hq().get_multi_tick_charts(MARKET(market), code, parse_date(date), days)
+
+
+@mcp.tool()
+def goods_server_info() -> dict:
+    '''
+    获取扩展行情服务器信息（交易日/时段/状态等）
+        Return:
+            Dict: 服务器信息
+    '''
+    return ex_hq().server_info()
 
 
 # ============ 指标计算工具 ============
