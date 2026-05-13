@@ -1,6 +1,6 @@
 [project]
 name = "tdx-mcp"
-version = "0.1.6"
+version = "0.2.3"
 description = "TDX stock data client with MCP server for AI assistants (Claude, Cursor, OpenClaw)"
 authors = [{ name = "LisonEvf", email = "lisonevf@gmail.com" }]
 readme = "README.md"
@@ -35,3 +35,17 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 py-modules = ["mcpServer"]
 license-files = []
+packages = [
+    "opentdx",
+    "opentdx.client",
+    "opentdx.commands",
+    "opentdx.enums",
+    "opentdx.parser",
+    "opentdx.parser.ex_quotation",
+    "opentdx.parser.mac_quotation",
+    "opentdx.parser.quotation",
+    "opentdx.utils",
+]
+
+[tool.setuptools.package-dir]
+"opentdx" = "opentdx/opentdx"
