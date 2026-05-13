@@ -1,6 +1,6 @@
 [project]
 name = "tdx-mcp"
-version = "0.2.3"
+version = "0.2.4"
 description = "TDX stock data client with MCP server for AI assistants (Claude, Cursor, OpenClaw)"
 authors = [{ name = "LisonEvf", email = "lisonevf@gmail.com" }]
 readme = "README.md"
